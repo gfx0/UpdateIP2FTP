@@ -11,11 +11,11 @@
 
 #ifdef _DEBUG
 int testCommunicationsValue = 5;
-#define TIMELIMIT_FOR_RETRANSMISSION_MS 5000
 #else
 int testCommunicationsValue = 0;
-#define TIMELIMIT_FOR_RETRANSMISSION_MS 5 * ONE_MINUTE
 #endif
+
+#define TIMELIMIT_FOR_RETRANSMISSION_MS 5 * ONE_MINUTE
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void coreLoop();
