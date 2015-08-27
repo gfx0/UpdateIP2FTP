@@ -2,17 +2,20 @@
 #include <stdio.h>
 #include <wininet.h>
 #include <iostream>
+#include <time.h>
 
 #pragma comment(lib, "Winmm.lib")
 #pragma comment(lib, "wininet")
 
+#define ONE_MINUTE 60000
+
 #ifdef _DEBUG
 int testCommunicationsValue = 5;
+#define TIMELIMIT_FOR_RETRANSMISSION_MS 5000
 #else
 int testCommunicationsValue = 0;
+#define TIMELIMIT_FOR_RETRANSMISSION_MS 5 * ONE_MINUTE
 #endif
-
-#define TIMELIMIT_FOR_RETRANSMISSION_MS 10000
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void coreLoop();
@@ -20,6 +23,9 @@ void updateExternalIP();
 
 DWORD timeSinceLastUpdate = 0;
 bool isHeartBeating = false;
+
+HWND hWndTimestampOfLastSentIP = NULL;
+HWND hWndLastSentIP = NULL;
 
 int CALLBACK WinMain(
 	_In_ HINSTANCE hInstance,
@@ -29,7 +35,7 @@ int CALLBACK WinMain(
 {
 
 #ifdef _DEBUG
-	MessageBox(0, "Running in debug mode! Test data will be sent!");
+	MessageBox(0, "Running in debug mode! Test data will be sent!",0,0);
 #endif
 
 	char launchMessage[512] = { 0 };
@@ -45,14 +51,22 @@ int CALLBACK WinMain(
 	if (!RegisterClass(&wc))
 		return 1;
 
-	if (!CreateWindowA(wc.lpszClassName,
-		"UpdateIP2FTP",
-		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-		0, 0, 320, 240, 0, 0, hInstance, NULL))
+	HWND mainHWND = CreateWindowA(wc.lpszClassName,
+									"UpdateIP2FTP",
+									WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+									0, 0, 320, 240, 0, 0, hInstance, NULL);
+	if ( !mainHWND )
 		return 2;
 
+	hWndTimestampOfLastSentIP = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("Edit"), TEXT("Last IP Sent at:"),
+		WS_CHILD | WS_VISIBLE | ES_READONLY, 0, 0, 300, 20, mainHWND, NULL, NULL, NULL);
+	
+	hWndLastSentIP = CreateWindowEx(WS_EX_CLIENTEDGE, TEXT("Edit"), TEXT("Waiting to send first ip..."),
+		WS_CHILD | WS_VISIBLE | ES_READONLY, 0, 20, 300, 20, mainHWND, NULL, NULL, NULL);
+	
 	timeSinceLastUpdate = timeGetTime();
 	isHeartBeating = true;
+
 	while (isHeartBeating)
 	{
 		if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE) > 0) //Or use an if statement
@@ -76,16 +90,29 @@ void coreLoop()
 	char msgg[512] = { 0 };
 	if (timeDeltaMS > TIMELIMIT_FOR_RETRANSMISSION_MS)
 	{
-		sprintf_s(msgg, "time to update! :) timeSinceLastUpdate: %d timeNow: %d timeDeltaMS: %d\n", timeNow, timeSinceLastUpdate, timeDeltaMS);
+		sprintf_s(msgg, "Updating IP: lastUpdate: %d timeNow: %d timeDeltaMS: %d\n", timeNow, timeSinceLastUpdate, timeDeltaMS);
 		timeSinceLastUpdate = timeGetTime();
 		OutputDebugStringA(msgg);
 
 		updateExternalIP();
 
 	} else {
-		sprintf_s(msgg, "not yet time to update!:( timeSinceLastUpdate: %d timeNow : %d timeDeltaMS : %d\n", timeNow, timeSinceLastUpdate, timeDeltaMS);
-		OutputDebugStringA(msgg);
+
+		//sprintf_s(msgg, "not yet time to update!:( timeSinceLastUpdate: %d timeNow : %d timeDeltaMS : %d\n", timeNow, timeSinceLastUpdate, timeDeltaMS);
+		//OutputDebugStringA(msgg);
 	}
+}
+
+void timeStamp()
+{
+	SYSTEMTIME st, lt;
+
+	GetSystemTime(&st);
+	GetLocalTime(&lt);
+
+	char timeStampMsg[512] = { 0 };
+	sprintf_s(timeStampMsg,"Last IP Sent at: %02d:%02d\n", st.wHour, st.wMinute);
+	SetWindowText(hWndTimestampOfLastSentIP, timeStampMsg);
 }
 
 void updateExternalIP()
@@ -102,6 +129,8 @@ void updateExternalIP()
 	InternetCloseHandle(hFile);
 
 	OutputDebugStringA("Sending this via http post:\n");
+
+
 
 	Sleep(1000);
 
@@ -121,6 +150,8 @@ void updateExternalIP()
 	if (testCommunicationsValue == 1)
 		sprintf_s(buffer, "1.1.1.1");
 
+	SetWindowText(hWndLastSentIP, buffer);
+
 	sprintf_s(newMsg, "http://www.janimakinen.com/ipcheck/updateip.php?%s\0", buffer);
 
 	OutputDebugStringA(newMsg);
@@ -130,6 +161,8 @@ void updateExternalIP()
 
 	InternetCloseHandle(hFile);
 	InternetCloseHandle(hInternet);
+
+	timeStamp();
 
 	testCommunicationsValue--;
 }
@@ -170,6 +203,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 }
 
+#undef ONE_MINUTE
+#undef TIMELIMIT_FOR_RETRANSMISSION_MS
 
 /********************************************************
  *
@@ -196,40 +231,9 @@ while (--i)
 return 0;
 */
 
-
-/********************************************************
- *
- * Original Pseudocode
- *
- ********************************************************/
-
-//wait for timelimit
-
-	//find out current external IP address
-
-	//save current external IP address
-
-	//if transmission file does not exist
-
-		//create file transmission file
-
-	//write the external IP address into the transmission file
-
-	//connect to FTP
-
-		//check if file exists ?
-
-			//IF NOT -> put file into FTP
-
-			//ELSE -> replace file by this file
-
-	//disconnect from FTP
-
-//program shutdown
-
 /********************************************************
 *
-* Pseudocode Improved!
+* Pseudocode
 *
 ********************************************************/
 
