@@ -15,7 +15,7 @@ int testCommunicationsValue = 5;
 int testCommunicationsValue = 0;
 #endif
 
-#define TIMELIMIT_FOR_RETRANSMISSION_MS 5 * ONE_MINUTE
+#define TIMELIMIT_FOR_RETRANSMISSION_MS 15 * ONE_MINUTE
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void coreLoop();
